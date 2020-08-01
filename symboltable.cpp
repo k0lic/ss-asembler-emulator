@@ -8,6 +8,17 @@ SymbolTable::SymbolTable() {}
 
 /* PUBLIC METHODS */
 
+SymbolTableEntry* SymbolTable::getSymbol(string name)
+{
+	for (int i = 0; i < symbols.size(); i++)
+	{
+		if (symbols[i].getName() == name)
+			return &symbols[i];
+	}
+
+	return nullptr;
+}
+
 int SymbolTable::getSymbolIndex(string name)
 {
 	for (int i = 0; i < symbols.size(); i++)
@@ -64,4 +75,27 @@ void SymbolTable::printAllSymbols()
 			cout << ", ";
 	}
 	cout << endl;
+}
+
+bool SymbolTable::popReference(string name, int *sectionNum, int *address, BPAction *action)
+{
+	for (int i = 0; i < symbols.size(); i++)
+	{
+		if (symbols[i].getName() == name)
+			return symbols[i].popReference(sectionNum, address, action);
+	}
+
+	return false;
+}
+
+void SymbolTable::pushReference(string name, int sectionNum, int address, BPAction action)
+{
+	for (int i = 0; i < symbols.size(); i++)
+	{
+		if (symbols[i].getName() == name)
+		{
+			symbols[i].pushReference(sectionNum, address, action);
+			return;
+		}
+	}
 }

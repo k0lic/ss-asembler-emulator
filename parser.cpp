@@ -215,7 +215,7 @@ TokenType Parser::moreAnalysis(string token, string* firstGroup, string* secondG
 	{
 		0,								0, 							0, 							DOLLAR,							DOLLAR,
 		STAR, 							STAR, 						0,							PARENTHESES,					STAR,
-		STAR | PARENTHESES, 			PARENTHESES, 				PARENTHESES, 				STAR | PARENTHESES,				STAR | PARENTHESES
+		(char)(STAR | PARENTHESES),		PARENTHESES, 				PARENTHESES, 				(char)(STAR | PARENTHESES),		(char)(STAR | PARENTHESES)
 	};
 	TokenType tokenTypeArray[] =
 	{

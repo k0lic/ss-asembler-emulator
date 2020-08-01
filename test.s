@@ -1,4 +1,5 @@
-.global _start
+.global _start, asdf, a, b, x
+.extern f_var1, f_var2, fun
 .section text:
 	_start:									;ulazna tacka programa
 		mov var_x1, a
@@ -31,6 +32,12 @@
 	asdf:
 		jmp asdf
 	kraj:
+		push $100
+		push $50
+		call fun
+		pop %r0
+		pop %r0								; %r0 = 150 ???
+		add %r0, f_var2
 		halt
 		.equ labela3, labela2 + var_x2 - var_x1 - 1
 		.equ opet, _start + 19

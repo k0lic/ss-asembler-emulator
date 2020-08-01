@@ -1,6 +1,8 @@
 #include <iostream>
 #include "parser.h"
 #include "symboltable.h"
+#include "exceptions.h"
+
 
 using namespace std;
 
@@ -36,38 +38,42 @@ int main(int argc, char *argv[])
 			tokenType = parser->getNextToken(&token, &firstGroup, &secondGroup, &flags);
 
 			if (tokenType == JUNK)
-			{
-				throw 88;
-			}
-	
+				throw UnrecognizableTokenException(fileName, parser->getLineNumber(), token);
+
+			if (tokenType == COMMENT)
+				continue;
+
 			if (tokenType == ENDOFFILE || (tokenType == DIRECTIVE && token == ".end"))
 			{
 				tokenType = ENDOFFILE;
 			}
-			else if (tokenType != COMMENT)
+			else if (tokenType == DIRECTIVE)
 			{
-				if (tokenType == DIRECTIVE || tokenType == INSTRUCTION)
-					cout << endl;
-				cout << token << " ";
-
-				if (tokenType == SYMBOL || tokenType == SYMBOL_AND_REGISTER || tokenType == LABEL)
-				{
-					symbolTable.getSymbolIndex(firstGroup);
-				}
+				
 			}
+
+
+
+
+			/*
+			if (tokenType == DIRECTIVE || tokenType == INSTRUCTION)
+				cout << endl;
+			cout << token << " ";
+
+			if (tokenType == SYMBOL || tokenType == SYMBOL_AND_REGISTER || tokenType == LABEL)
+			{
+				symbolTable.getSymbolIndex(firstGroup);
+			}
+			*/
 		}
 	}
-	catch (int e)
+	catch (MyException& e)
 	{
-		cout << endl << "\033[1;31m" << endl;
-		cout << "Uh oh... Something went wrong! ERR " << e << endl;
-		cout << "Problem cause: '" << token << "'" << endl;
-		cout << "In file '" << fileName << "' at line: " << parser->getLineNumber() << endl;
-		cout << "\033[0m" << endl;
-
 		//collect garbage
 		delete parser;
 		parser = nullptr;
+
+		cout << e;
 
 		return 1;
 	}

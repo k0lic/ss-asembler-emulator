@@ -12,6 +12,7 @@ SymbolTableEntry::SymbolTableEntry(string name, int index, bool global)
 	this->value = 0;
 	this->global = global;
 	this->index = index;
+	this->sectionCode = nullptr;
 }
 
 SymbolTableEntry::SymbolTableEntry(string name, int index, int section, int value)
@@ -22,6 +23,36 @@ SymbolTableEntry::SymbolTableEntry(string name, int index, int section, int valu
 	this->value = value;
 	this->global = false;
 	this->index = index;
+	this->sectionCode = nullptr;
+}
+
+/* DESTRUCTOR */
+
+SymbolTableEntry::~SymbolTableEntry()
+{
+	references.clear();
+	delete sectionCode;
+	sectionCode = nullptr;
+}
+
+/* FORWARD REFERENCE MANIPULATION */
+
+bool SymbolTableEntry::popReference(int *sectionNum, int *address, BPAction *action)
+{
+	if (references.empty())
+		return false;
+
+	ForwardReference &ref = references.back();
+	*sectionNum = ref.getSectionNumber();
+	*address = ref.getAddress();
+	*action = ref.getAction();
+	references.pop_back();
+	return true;
+}
+
+void SymbolTableEntry::pushReference(int sectionNum, int address, BPAction action)
+{
+	references.emplace_back(sectionNum, address, action);
 }
 
 /* GETTERS */
@@ -56,6 +87,11 @@ int SymbolTableEntry::getIndex()
 	return index;
 }
 
+Section* SymbolTableEntry::getSectionCode()
+{
+	return sectionCode;
+}
+
 /* SETTERS */
 
 void SymbolTableEntry::setDefined(bool defined)
@@ -76,4 +112,9 @@ void SymbolTableEntry::setValue(int value)
 void SymbolTableEntry::setGlobal(bool global)
 {
 	this->global = global;
+}
+
+void SymbolTableEntry::newSectionCode()
+{
+	sectionCode = new Section();
 }
