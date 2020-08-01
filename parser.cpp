@@ -9,16 +9,53 @@ char Parser::STAR = 2;
 char Parser::PARENTHESES = 4;
 char Parser::COMMA = 8;
 char Parser::NEW_LINE = 128;
+char Parser::INS_SET0 = 1;					// 0 operand instructions
+char Parser::INS_SET1 = 2;					// 1 operand branch instructions
+char Parser::INS_SET2 = 4;					// 1 operand non-branch instructions
+char Parser::INS_SET3 = 8;					// 2 operand non-branch instructions (normal)
+char Parser::INS_SET4 = 16;					// 2 operand non-branch no-target instructions (result not stored - only psw indicators)
+char Parser::INS_SET5 = 32;					// 2 reverse operand non-branch instruction (first operand is the destination, second is the source)
+char Parser::INSTRUCTION_MOD = 64;
 
 unordered_set<string> Parser::directiveSet
 {
 	".global", ".extern", ".section", ".end", ".byte", ".word", ".skip", ".equ"
 };
 
-unordered_set<string> Parser::instructionSet
+// unordered_set<string> Parser::instructionSet
+// {
+// 	"halt", "iret", "ret", "int", "call", "jmp", "jeq", "jne", "jgt", "push", "pop",
+// 	"xchg", "mov", "add", "sub", "mul", "div", "cmp", "not", "and", "or", "xor", "test", "shl", "shr"
+// };
+
+unordered_set<string> Parser::instructionSet0	// 0 operand instructions
 {
-	"halt", "iret", "ret", "int", "call", "jmp", "jeq", "jne", "jgt", "push", "pop",
-	"xchg", "mov", "add", "sub", "mul", "div", "cmp", "not", "and", "or", "xor", "test", "shl", "shr"
+	"halt", "iret", "ret"
+};
+
+unordered_set<string> Parser::instructionSet1	// 1 operand branch instructions
+{
+	"call", "jmp", "jeq", "jne", "jgt"
+};
+
+unordered_set<string> Parser::instructionSet2	// 1 operand non-branch instructions
+{
+	"int", "push", "pop"
+};
+
+unordered_set<string> Parser::instructionSet3	// 2 operand non-branch instructions (normal)
+{
+	"xchg", "mov", "add", "sub", "mul", "div", "not", "and", "or", "xor", "shl"
+};
+
+unordered_set<string> Parser::instructionSet4	// 2 operand non-branch no-target instructions (result not stored - only psw indicators)
+{
+	"cmp", "test"
+};
+
+unordered_set<string> Parser::instructionSet5	// 2 reverse operand non-branch instruction (first operand is the destination, second is the source)
+{
+	"shr"
 };
 
 /* 	CONSTRUCTOR */
@@ -66,7 +103,7 @@ TokenType Parser::getNextToken(string *result, string *firstGroup, string *secon
 	}
 
 	// perform crude analysis of token
-	TokenType ret = crudeAnalysis(token);
+	TokenType ret = crudeAnalysis(token, firstGroup, secondGroup, flags);
 
 	// toss the rest of the line if token is a comment
 	if (ret == COMMENT)
@@ -116,7 +153,7 @@ bool Parser::getNextLine()
  *		COMMENT
  *		OTHER
  */
-TokenType Parser::crudeAnalysis(string token)
+TokenType Parser::crudeAnalysis(string token, string* firstGroup, string* secondGroup, char* flags)
 {
 	// regex directivePattern("\\.[a-zA-Z_][a-zA-Z_0-9]*");
 	regex arithmeticPattern("[+-]");						// might evolve into something more complex - recognizing whole expressions
@@ -127,10 +164,35 @@ TokenType Parser::crudeAnalysis(string token)
 		return DIRECTIVE;
 	}
 
-	if (instructionSet.find(token) != instructionSet.end()
-		|| ((token[token.length()-1] == 'b' || token[token.length()-1] == 'w') && instructionSet.find(token.substr(0, token.length()-1)) != instructionSet.end()))
+	// supporting arrays to make going through the 6 different instruction types easier
+	unordered_set<string> *instructionSets[] =
 	{
-		return INSTRUCTION;
+		&instructionSet0,	&instructionSet1,	&instructionSet2,	&instructionSet3,	&instructionSet4,	&instructionSet5
+	};
+	char flagsArray[] =
+	{
+		INS_SET0, 			INS_SET1, 			INS_SET2, 			INS_SET3, 			INS_SET4, 			INS_SET5
+	};
+
+	// setup for checking the 'b' or 'w' instruction suffix
+	bool modPossible = token[token.length() - 1] == 'b' || token[token.length() - 1] == 'w';
+	string tokenMod = token.substr(0, token.length() - 1);
+
+	// check for the 6 instruction types
+	for (int i = 0; i < 6; i++)
+	{
+		if (instructionSets[i]->find(token) != instructionSets[i]->end())
+		{
+			*firstGroup = token;
+			*flags |= flagsArray[i];
+			return INSTRUCTION;
+		}
+		else if (modPossible && instructionSets[i]->find(tokenMod) != instructionSets[i]->end())
+		{
+			*firstGroup = tokenMod;
+			*flags |= flagsArray[i] | INSTRUCTION_MOD;
+			return INSTRUCTION;
+		}
 	}
 
 	if (regex_match(token, arithmeticPattern))

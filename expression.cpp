@@ -26,7 +26,7 @@ void Expression::add(int number, BPAction action)
 char Expression::tryToCalculate(SymbolTable &symTab, int *result, int *sectionNum)
 {
 	// check for undefined symbols
-	for (int i=0;i<unknowns.size();i++)
+	for (unsigned int i=0;i<unknowns.size();i++)
 	{
 		SymbolTableEntry *ste = symTab.getSymbol(unknowns[i].getName());
 		if (ste == nullptr || !ste->isDefined())

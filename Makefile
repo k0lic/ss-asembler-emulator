@@ -1,10 +1,10 @@
-OBJS = asembler.o parser.o symboltable.o symboltableentry.o forwardreference.o section.o incalculable.o expression.o globalsymbol.o exceptions.o
+OBJS = asembler.o parser.o symboltable.o symboltableentry.o section.o incalculable.o expression.o globalsymbol.o exceptions.o relocationrecord.o
 
 asembler: $(OBJS)
-	g++ -o $@ $(OBJS)
+	g++ -Wall -o $@ $(OBJS)
 
 %.o: %.cpp %.h
-	g++ -c -o $@ $<
+	g++ -c -Wall -o $@ $<
 
 clean:
 	rm *.o

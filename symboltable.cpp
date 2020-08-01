@@ -4,13 +4,25 @@ using namespace std;
 
 /* CONSTRUCTOR */
 
-SymbolTable::SymbolTable() {}
+SymbolTable::SymbolTable()
+{
+	// symbols.reserve(10);
+	symbols.emplace_back("#UND", 0);
+}
+
+/* DESTRUCTOR */
+
+SymbolTable::~SymbolTable()
+{
+	symbols.clear();
+}
 
 /* PUBLIC METHODS */
 
 SymbolTableEntry* SymbolTable::getSymbol(string name)
 {
-	for (int i = 0; i < symbols.size(); i++)
+	cout << "Symbols.capacity() = " << symbols.capacity() << endl;
+	for (unsigned int i = 0; i < symbols.size(); i++)
 	{
 		if (symbols[i].getName() == name)
 			return &symbols[i];
@@ -19,22 +31,28 @@ SymbolTableEntry* SymbolTable::getSymbol(string name)
 	return nullptr;
 }
 
+SymbolTableEntry& SymbolTable::operator[](int index)
+{
+	return symbols[index];
+}
+
 int SymbolTable::getSymbolIndex(string name)
 {
-	for (int i = 0; i < symbols.size(); i++)
+	cout << "Symbols.capacity() = " << symbols.capacity() << endl;
+	for (unsigned int i = 0; i < symbols.size(); i++)
 	{
 		if (symbols[i].getName() == name)
-			return i + 1;
+			return i;
 	}
 
-	symbols.emplace_back(name, symbols.size() + 1);
+	symbols.emplace_back(name, symbols.size());
 
-	return symbols.size();
+	return symbols.size() - 1;
 }
 
 bool SymbolTable::setSymbolValue(string name, int section, int value)
 {
-	for (int i = 0; i < symbols.size(); i++)
+	for (unsigned int i = 0; i < symbols.size(); i++)
 	{
 		if (symbols[i].getName() == name)
 		{
@@ -47,14 +65,14 @@ bool SymbolTable::setSymbolValue(string name, int section, int value)
 		}
 	}
 
-	symbols.emplace_back(name, symbols.size() + 1, section, value);
+	symbols.emplace_back(name, symbols.size(), section, value);
 	
 	return true;
 }
 
 void SymbolTable::setSymbolGlobal(string name)
 {
-	for (int i = 0; i < symbols.size(); i++)
+	for (unsigned int i = 0; i < symbols.size(); i++)
 	{
 		if (symbols[i].getName() == name)
 		{
@@ -63,12 +81,12 @@ void SymbolTable::setSymbolGlobal(string name)
 		}
 	}
 
-	symbols.emplace_back(name, symbols.size() + 1, true);
+	symbols.emplace_back(name, symbols.size(), true);
 }
 
 void SymbolTable::printAllSymbols()
 {
-	for (int i = 0; i < symbols.size(); i++)
+	for (unsigned int i = 0; i < symbols.size(); i++)
 	{
 		cout << symbols[i].getName();
 		if (i + 1 < symbols.size())
@@ -77,25 +95,25 @@ void SymbolTable::printAllSymbols()
 	cout << endl;
 }
 
-bool SymbolTable::popReference(string name, int *sectionNum, int *address, BPAction *action)
-{
-	for (int i = 0; i < symbols.size(); i++)
-	{
-		if (symbols[i].getName() == name)
-			return symbols[i].popReference(sectionNum, address, action);
-	}
+// bool SymbolTable::popReference(string name, int *sectionNum, int *address, BPAction *action)
+// {
+// 	for (int i = 0; i < symbols.size(); i++)
+// 	{
+// 		if (symbols[i].getName() == name)
+// 			return symbols[i].popReference(sectionNum, address, action);
+// 	}
 
-	return false;
-}
+// 	return false;
+// }
 
-void SymbolTable::pushReference(string name, int sectionNum, int address, BPAction action)
-{
-	for (int i = 0; i < symbols.size(); i++)
-	{
-		if (symbols[i].getName() == name)
-		{
-			symbols[i].pushReference(sectionNum, address, action);
-			return;
-		}
-	}
-}
+// void SymbolTable::pushReference(string name, int sectionNum, int address, BPAction action)
+// {
+// 	for (int i = 0; i < symbols.size(); i++)
+// 	{
+// 		if (symbols[i].getName() == name)
+// 		{
+// 			symbols[i].pushReference(sectionNum, address, action);
+// 			return;
+// 		}
+// 	}
+// }
