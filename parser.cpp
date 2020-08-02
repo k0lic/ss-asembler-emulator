@@ -229,7 +229,7 @@ TokenType Parser::moreAnalysis(string token, string* firstGroup, string* secondG
 {
 	// regex setup
 	string symbolPatternString = "([a-zA-Z_][a-zA-Z_0-9]*)";
-	string literalPatternString = "(0|[1-9]\\d*)";
+	string literalPatternString = "(0|-?[1-9]\\d*)";
 	string registerPatternString = "((?:r[0-7]|pc|psw)[lh]?)";
 	
 	regex labelPattern(symbolPatternString + ":");

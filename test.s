@@ -48,6 +48,7 @@
 		.word 3, 65535
 		.byte 1, 1, 2, 3, 5, 8, 13, 21
 		jmp asdf
+		cmp $8, $-4
 .section bss:
 	a:	.skip 2
 	b:	.skip 2

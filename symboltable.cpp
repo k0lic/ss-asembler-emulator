@@ -6,7 +6,6 @@ using namespace std;
 
 SymbolTable::SymbolTable()
 {
-	// symbols.reserve(10);
 	symbols.emplace_back("#UND", 0);
 }
 
@@ -21,7 +20,6 @@ SymbolTable::~SymbolTable()
 
 SymbolTableEntry* SymbolTable::getSymbol(string name)
 {
-	cout << "Symbols.capacity() = " << symbols.capacity() << endl;
 	for (unsigned int i = 0; i < symbols.size(); i++)
 	{
 		if (symbols[i].getName() == name)
@@ -38,7 +36,6 @@ SymbolTableEntry& SymbolTable::operator[](int index)
 
 int SymbolTable::getSymbolIndex(string name)
 {
-	cout << "Symbols.capacity() = " << symbols.capacity() << endl;
 	for (unsigned int i = 0; i < symbols.size(); i++)
 	{
 		if (symbols[i].getName() == name)
@@ -48,6 +45,11 @@ int SymbolTable::getSymbolIndex(string name)
 	symbols.emplace_back(name, symbols.size());
 
 	return symbols.size() - 1;
+}
+
+int SymbolTable::size()
+{
+	return symbols.size();
 }
 
 bool SymbolTable::setSymbolValue(string name, int section, int value)

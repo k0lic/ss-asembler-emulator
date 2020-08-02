@@ -14,6 +14,7 @@ public:
 	SymbolTableEntry* getSymbol(string name);
 	SymbolTableEntry& operator[](int index);
 	int getSymbolIndex(string name);
+	int size();
 	bool setSymbolValue(string name, int section, int value);
 	void setSymbolGlobal(string name);
 	void printAllSymbols();
