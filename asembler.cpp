@@ -13,7 +13,6 @@
 #include "elfwriter.h"
 #include "exceptions.h"
 
-
 using namespace std;
 
 map<string, unsigned char> opCodes =

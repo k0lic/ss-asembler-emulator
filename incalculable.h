@@ -1,9 +1,10 @@
 #pragma once
 
 #include <string>
-#include "forwardreference.h"
 
 using namespace std;
+
+enum BPAction { PLUS, MINUS };
 
 class Incalculable
 {
