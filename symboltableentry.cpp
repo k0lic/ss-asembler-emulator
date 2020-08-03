@@ -88,6 +88,32 @@ SymbolTableEntry::~SymbolTableEntry()
 	relocationRecords = nullptr;
 }
 
+/* ASSIGN OPERATOR */
+
+SymbolTableEntry& SymbolTableEntry::operator=(const SymbolTableEntry& other)
+{
+	this->name = other.name;
+	this->defined = other.defined;
+	this->section = other.section;
+	this->value = other.value;
+	this->global = other.global;
+	this->index = other.index;
+
+	delete this->sectionCode;
+	if (other.sectionCode == nullptr)
+		this->sectionCode = nullptr;
+	else
+		this->sectionCode = new Section(*other.sectionCode);
+
+	delete this->relocationRecords;
+	if (other.relocationRecords == nullptr)
+		this->relocationRecords = nullptr;
+	else
+		this->relocationRecords = new vector<RelocationRecord>(*other.relocationRecords);
+
+	return *this;
+}
+
 /* FORWARD REFERENCE MANIPULATION */
 
 // bool SymbolTableEntry::popReference(int *sectionNum, int *address, BPAction *action)
@@ -172,6 +198,11 @@ void SymbolTableEntry::setValue(int value)
 void SymbolTableEntry::setGlobal(bool global)
 {
 	this->global = global;
+}
+
+void SymbolTableEntry::setIndex(int index)
+{
+	this->index = index;
 }
 
 void SymbolTableEntry::newSectionCode()

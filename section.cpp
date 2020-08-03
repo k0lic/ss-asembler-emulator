@@ -34,6 +34,18 @@ void Section::addInstruction(int instructionLength, unsigned char *bytes)
 		code.push_back(bytes[i]);
 }
 
+void Section::readBytes(int startAt, int numOfBytes, unsigned char *bytes)
+{
+	for (int i = 0; i < numOfBytes; i++)
+		bytes[i] = code[startAt + i];
+}
+
+void Section::overwriteBytes(int startAt, int numOfBytes, unsigned char *bytes)
+{
+	for (int i = 0; i < numOfBytes; i++)
+		code[startAt + i] = bytes[i];	
+}
+
 int Section::size()
 {
 	return code.size();

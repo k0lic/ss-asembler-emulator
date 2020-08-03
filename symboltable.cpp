@@ -6,7 +6,7 @@ using namespace std;
 
 SymbolTable::SymbolTable()
 {
-	symbols.emplace_back("#UND", 0);
+	symbols.emplace_back("*UND", 0);
 }
 
 /* DESTRUCTOR */

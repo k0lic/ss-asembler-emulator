@@ -5,7 +5,7 @@
 
 using namespace std;
 
-/* BASE CLASS */
+/* BASE CLASSES */
 
 class MyException
 {
@@ -20,54 +20,68 @@ private:
 	int lineNum;
 };
 
+class MyExceptionWithToken : public MyException
+{
+public:
+	MyExceptionWithToken(string fileName, int lineNum, string token);
+protected:
+	string token;
+};
+
 /* DERIVED CLASSES */
 
-class UnrecognizableTokenException : public MyException
+class UnrecognizableTokenException : public MyExceptionWithToken
 {
 public:
 	UnrecognizableTokenException(string fileName, int lineNum, string token);
 	string name() const;
 	string message() const;
-private:
-	string token;
 };
 
-class UnexpectedTokenException : public MyException
+class UnexpectedTokenException : public MyExceptionWithToken
 {
 public:
 	UnexpectedTokenException(string fileName, int lineNum, string token);
 	string name() const;
 	string message() const;
-private:
-	string token;
 };
 
-class InvalidOperandForInstruction : public MyException
+class InvalidOperandForInstruction : public MyExceptionWithToken
 {
 public:
 	InvalidOperandForInstruction(string fileName, int lineNum, string token);
 	string name() const;
 	string message() const;
-private:
-	string token;
 };
 
-class DuplicateDefinition : public MyException
+class DuplicateDefinition : public MyExceptionWithToken
 {
 public:
 	DuplicateDefinition(string fileName, int lineNum, string token);
 	string name() const;
 	string message() const;
-private:
-	string token;
 };
 
-class MissingDefinition : public MyException
+class MissingDefinition : public MyExceptionWithToken
 {
 public:
 	MissingDefinition(string fileName, int lineNum, string token);
 	string name() const;
 	string message() const;
-private:
-	string token;
+};
+
+class NonRelocatableExpression : public MyExceptionWithToken
+{
+public:
+	NonRelocatableExpression(string fileName, int lineNum, string token);
+	string name() const;
+	string message() const;
+};
+
+class CircularDependencies : public MyExceptionWithToken
+{
+public:
+	CircularDependencies(string fileName, int lineNum, string token);
+	string name() const;
+	string message() const;
 };

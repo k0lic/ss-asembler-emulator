@@ -6,9 +6,11 @@
 #include <map>
 #include "parser.h"
 #include "symboltable.h"
+#include "symboltableentry.h"
 #include "expression.h"
 #include "globalsymbol.h"
 #include "littleendian.h"
+#include "elfwriter.h"
 #include "exceptions.h"
 
 
@@ -117,7 +119,7 @@ int main(int argc, char *argv[])
 
 	try
 	{
-		// single pass through the source file
+		// STEP1: single pass through the source file
 		while (tokenType != ENDOFFILE)
 		{
 			// get a single token - array of non-whitespace characters
@@ -383,16 +385,16 @@ int main(int argc, char *argv[])
 						// get the index of the used symbol
 						int index = symbolTable.getSymbolIndex(firstGroup);
 
+						// add a relocation record for the current section using the index of the used symbol
+						vector<RelocationRecord> *rel = symbolTable[currentSection].getRelocationRecords();
+						rel->emplace_back(locationCounter, (numOfBytes == 1 ? R_386_8 : R_386_16), index);
+
 						// add a number of 'all 0' bytes to the current sections code
 						for (int i=0;i<numOfBytes;i++)
 						{
 							symbolTable[currentSection].getSectionCode()->addByte(0);
 							locationCounter++;
 						}
-
-						// add a relocation record for the current section using the index of the used symbol
-						vector<RelocationRecord> *rel = symbolTable[currentSection].getRelocationRecords();
-						rel->emplace_back(locationCounter, numOfBytes, R_386_32, index);
 
 						// check if a comma was used - if it was not used it means that the sentence is over
 						if (!(flags & Parser::COMMA))
@@ -443,7 +445,8 @@ int main(int argc, char *argv[])
 					int index = symbolTable.getSymbolIndex(firstGroup);
 					// go for pc-relative operand addressing only when using a branch instruction with immediate operand
 					bool pcRelativeAddressing = branchOperandExpected && !(flags & Parser::STAR);
-					symbolTable[currentSection].getRelocationRecords()->emplace_back(locationCounter, numOfBytes, (pcRelativeAddressing ? R_386_PC32 : R_386_32), index);
+					RelocationType relType = (numOfBytes == 1 ? (pcRelativeAddressing ? R_386_PC8 : R_386_8) : (pcRelativeAddressing ? R_386_PC16 : R_386_16));
+					symbolTable[currentSection].getRelocationRecords()->emplace_back(locationCounter, relType, index);
 
 					// write the operand addresss/value - 0 ('-numOfBytes' for pc-relative) for now, real value will be written when relocation records are processed
 					unsigned char bytes[numOfBytes];
@@ -603,7 +606,8 @@ int main(int argc, char *argv[])
 				else if (expressionExpected && (expressionStatus == 0 || expressionStatus == 1 || expressionStatus == 2))
 				{
 					BPAction action = (expressionStatus == 2) ? MINUS : PLUS;
-					incalculableSymbols.back().second.add(firstGroup, action);
+					int intToken = stoi(firstGroup);
+					incalculableSymbols.back().second.add(intToken, action);
 					expressionStatus = 3;
 				}
 				// if this branch is reached - no one requires a literal
@@ -722,7 +726,7 @@ int main(int argc, char *argv[])
 
 					// add a relocation record
 					int index = symbolTable.getSymbolIndex(firstGroup);
-					symbolTable[currentSection].getRelocationRecords()->emplace_back(locationCounter, 2, R_386_32, index);
+					symbolTable[currentSection].getRelocationRecords()->emplace_back(locationCounter, R_386_16, index);
 
 					// write the offset address - 0 for now, real value will be written when relocation records are processed
 					symbolTable[currentSection].getSectionCode()->addByte(0);
@@ -825,28 +829,247 @@ int main(int argc, char *argv[])
 			else
 				throw UnrecognizableTokenException(srcFileName, parser->getLineNumber(), token);
 		}
+		// END OF SINGLE PASS
 
-		// TODO: try to resolve expressions
-
-		// TODO: resolve global symbols table
-
-		// TODO: resolve relocation records
-
-		// TODO: rearrange symbol table
-
-		// TODO: output to dst file
-
-		ofstream out(dstFileName);
-
-		for (int i = 0; i < symbolTable.size(); i++)
+		// STEP2: try to calculate expressions (.equ directive)
+		int prevExCount = -1, exCount = incalculableSymbols.size();
+		// repeat while expressions are getting solved
+		while (exCount > 0 && exCount != prevExCount)
 		{
-			if (symbolTable[i].getSectionCode() != nullptr)
+			prevExCount = exCount;
+
+			int symbolValue, symbolSectionNum;
+			char outcome;
+
+			// go through all of the expressions and try to calculate at least one
+			for (unsigned int i = 0; i < incalculableSymbols.size();)
 			{
-				out << "." << symbolTable[i].getName() << ":" << endl;
-				out << *symbolTable[i].getSectionCode();
+				// try to calculate the expression
+				outcome = incalculableSymbols[i].second.tryToCalculate(symbolTable, &symbolValue, &symbolSectionNum);
+
+				// successful calculation
+				if (outcome == 0)
+				{
+					// get symbol table entry for this symbol
+					int index = symbolTable.getSymbolIndex(incalculableSymbols[i].first);
+
+					// check if the symbol was already defined
+					if (symbolTable[index].isDefined())
+						throw DuplicateDefinition(srcFileName, -1, incalculableSymbols[i].first);
+
+					// define the symbol
+					symbolTable[index].setDefined(true);
+					symbolTable[index].setValue(symbolValue);
+					symbolTable[index].setSection(symbolSectionNum);
+
+					// remove the now solved expression
+					exCount--;
+					incalculableSymbols.erase(incalculableSymbols.begin() + i);
+				}
+				// undefined symbol(s) - leave this expression for later
+				else if (outcome == 1)
+				{
+					i++;
+				}
+				// result is non-relocatable - invalid combination of symbols from multiple sections used
+				else if (outcome == 2)
+					throw NonRelocatableExpression(srcFileName, -1, incalculableSymbols[i].first);
 			}
 		}
 
+		// circular dependencies detected
+		if (exCount > 0)
+		{
+			// itemize all symbols that have circular dependencies
+			string circularDependentSymbols = "{ ";
+			for (unsigned int i = 0; i < incalculableSymbols.size() - 1; i++)
+				circularDependentSymbols += incalculableSymbols[i].first + ", ";
+			circularDependentSymbols += incalculableSymbols.back().first + " }";
+
+			throw CircularDependencies(srcFileName, -1, circularDependentSymbols);
+		}
+
+		// STEP3: resolve global symbols table
+		// go through all the exported symbols and check if they are defined - or for imported symbols, check if they are NOT defined
+		for (unsigned int i = 0; i < globalSymbols.size(); i++)
+		{
+			int index = symbolTable.getSymbolIndex(globalSymbols[i].getName());
+			GlobalType gt = globalSymbols[i].getType();
+
+			if (gt == GLOBAL)
+			{
+				if (!symbolTable[index].isDefined())
+					throw MissingDefinition(srcFileName, -1, symbolTable[index].getName());
+			}
+			else
+			{
+				if (symbolTable[index].isDefined())
+					throw DuplicateDefinition(srcFileName, -1, symbolTable[index].getName());
+			}
+
+			symbolTable[index].setGlobal(true);
+		}
+
+		// STEP4: update relocation records - remove same-section jumps, process local symbol records
+		for (int i = 0; i < symbolTable.size(); i++)
+		{
+			Section *sec = symbolTable[i].getSectionCode();
+			vector<RelocationRecord> *relRecords = symbolTable[i].getRelocationRecords(false);
+
+			// check if symbol is a section and has relocation records (sometimes a section doesn't)
+			if (relRecords != nullptr)
+			{
+				// go through all the relocation records and process each accordingly
+				for (unsigned int j = 0; j < relRecords->size();)
+				{
+					// extract data for easier use
+					int relOffset = relRecords->at(j).getOffset();
+					RelocationType relType = relRecords->at(j).getType();
+					int relSymbolIndex = relRecords->at(j).getSymbolIndex();
+
+					// if same-section pc relative - write it into code
+					if ((relType == R_386_PC16 || relType == R_386_PC8) && symbolTable[relSymbolIndex].getSection() == i)
+					{
+						// determine number of bytes that are used
+						int numOfBytes = (relType == R_386_PC16 ? 2 : 1);
+
+						// read the old value
+						unsigned char bytes[numOfBytes];
+						sec->readBytes(relOffset, numOfBytes, bytes);
+
+						// cast the old value to integer
+						int oldValue = LittleEndian::charLittleEndianToInt(numOfBytes, bytes);
+
+						// calculate new pc relative value
+						int newValue = oldValue + symbolTable[relSymbolIndex].getValue() - relOffset;
+
+						// cast the new value back to little endian char array
+						LittleEndian::intToLittleEndianChar(newValue, numOfBytes, bytes);
+
+						// write new value into code
+						sec->overwriteBytes(relOffset, numOfBytes, bytes);
+
+						// delete the relocation record
+						relRecords->erase(relRecords->begin() + j);
+					}
+					// if symbol is global - leave the record as is
+					else if (symbolTable[relSymbolIndex].isGlobal())
+						j++;
+					// if symbol is absolute - write it into code (only works for absolute relocation records)
+					else if ((relType == R_386_16 || relType == R_386_8) && symbolTable[relSymbolIndex].isDefined() && symbolTable[relSymbolIndex].getSection() == 0)
+					{
+						// determine number of bytes that are used
+						int numOfBytes = (relType == R_386_16 ? 2 : 1);
+
+						// read the old value
+						unsigned char bytes[numOfBytes];
+						sec->readBytes(relOffset, numOfBytes, bytes);
+
+						// cast the old value to integer
+						int oldValue = LittleEndian::charLittleEndianToInt(numOfBytes, bytes);
+
+						// calculate the new value
+						int newValue = oldValue + symbolTable[relSymbolIndex].getValue();
+
+						// cast the new value back to little endian char array
+						LittleEndian::intToLittleEndianChar(newValue, numOfBytes, bytes);
+
+						// write new value into code
+						sec->overwriteBytes(relOffset, numOfBytes, bytes);
+
+						// delete the relocation record
+						relRecords->erase(relRecords->begin() + j);
+					}
+					// if symbol is local - replace with section symbol
+					else
+					{
+						// determine number of bytes that are used
+						int numOfBytes = (relType == R_386_16 || relType == R_386_PC16 ? 2 : 1);
+
+						// read the old value
+						unsigned char bytes[numOfBytes];
+						sec->readBytes(relOffset, numOfBytes, bytes);
+
+						// cast the old value to integer
+						int oldValue = LittleEndian::charLittleEndianToInt(numOfBytes, bytes);
+
+						// calculate the new value
+						int newValue = oldValue + symbolTable[relSymbolIndex].getValue();
+
+						// cast the new value back to little endian char array
+						LittleEndian::intToLittleEndianChar(newValue, numOfBytes, bytes);
+
+						// write new value into code
+						sec->overwriteBytes(relOffset, numOfBytes, bytes);
+
+						// update the relocation record
+						relRecords->at(j).setSymbolIndex(symbolTable[relSymbolIndex].getSection());
+
+						// proceed to the next one
+						j++;
+					}
+				}
+			}
+		}
+
+		// STEP5: reorder symbol table so section symbols are at the beginning of the table
+		map<int, int> symTabRemap;
+		symTabRemap[0] = 0;
+		int remapNextSpot = 1;
+
+		// remap all sections to the beginning
+		for (int i = 1; i < symbolTable.size(); i++)
+			if (symbolTable[i].getSectionCode() != nullptr)
+				symTabRemap[i] = remapNextSpot++;
+
+		// remap the rest of the symbols
+		for (int i = 1; i < symbolTable.size(); i++)
+			if (symbolTable[i].getSectionCode() == nullptr)
+				symTabRemap[i] = remapNextSpot++;
+
+		// apply new order to relocation records
+		for (int i = 0; i < symbolTable.size(); i++)
+		{
+			vector<RelocationRecord> *relRecords = symbolTable[i].getRelocationRecords(false);
+
+			if (relRecords != nullptr)
+			{
+				for (unsigned int j = 0; j < relRecords->size(); j++)
+					(*relRecords)[j].setSymbolIndex(symTabRemap[(*relRecords)[j].getSymbolIndex()]);
+			}
+		}
+
+		// apply new order to symbol table fields
+		for (int i = 0; i < symbolTable.size(); i++)
+		{
+			symbolTable[i].setIndex(symTabRemap[symbolTable[i].getIndex()]);
+			symbolTable[i].setSection(symTabRemap[symbolTable[i].getSection()]);
+		}
+
+		// reorder symbol table 
+		for (int i = 0; i < symbolTable.size();)
+		{
+			// check if symbol needs moving
+			if (symbolTable[i].getIndex() != i)
+			{
+				// swap the symbol in the current spot with the symbol in the target spot
+				int targetIndex = symbolTable[i].getIndex();
+
+				SymbolTableEntry tmp = symbolTable[targetIndex];
+				symbolTable[targetIndex] = symbolTable[i];
+				symbolTable[i] = tmp;
+			}
+			// symbol does not need moving, onto the next one
+			else
+				i++;
+		}
+
+		// STEP6: output to dst file
+		// TODO: maybe a binary form for the emulator
+		ofstream out(dstFileName);
+
+		ElfWriter *elf = new ElfWriter(symbolTable);
+		out << *elf;
 	}
 	catch (MyException& e)
 	{

@@ -31,6 +31,7 @@
 		jmp *%psw
 	asdf:
 		jmp asdf
+		movb $hundred, %r4h
 	kraj:
 		push $100
 		push $50
@@ -53,4 +54,7 @@
 	a:	.skip 2
 	b:	.skip 2
 	x:	.skip 100
+		.equ onefifty, fifty + hundred - 0
+		.equ hundred, 39 + fifty + 92 - 18 + 49 - 62 - 50
+		.equ fifty, 1 + 50 - 1
 .end

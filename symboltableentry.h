@@ -17,6 +17,7 @@ public:
 	SymbolTableEntry(const SymbolTableEntry& other);											// copy constructor
 	SymbolTableEntry(SymbolTableEntry&& other);													// move constructor
 	~SymbolTableEntry();
+	SymbolTableEntry& operator=(const SymbolTableEntry& other);									// copy assign operator
 	// bool popReference(int *sectionNum, int *address, BPAction *action);
 	// void pushReference(int sectionNum, int address, BPAction action);
 	string getName();
@@ -31,6 +32,7 @@ public:
 	void setSection(int section);
 	void setValue(int value);
 	void setGlobal(bool global);
+	void setIndex(int index);
 	void newSectionCode();
 	vector<RelocationRecord>* newRelocationRecords();
 private:

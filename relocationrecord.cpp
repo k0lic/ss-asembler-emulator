@@ -2,10 +2,17 @@
 
 using namespace std;
 
-RelocationRecord::RelocationRecord(int offset, int targetSize, RelocationType type, int symbolIndex)
+map<RelocationType, string> RelocationRecord::relTypeMap =
+{
+	{ R_386_16,		"R_386_16"},
+	{ R_386_PC16,	"R_386_PC16"},
+	{ R_386_8,		"R_386_8"},
+	{ R_386_PC8,	"R_386_PC8"}
+};
+
+RelocationRecord::RelocationRecord(int offset, RelocationType type, int symbolIndex)
 {
 	this->offset = offset;
-	this->targetSize = targetSize;
 	this->type = type;
 	this->symbolIndex = symbolIndex;
 }
@@ -13,11 +20,6 @@ RelocationRecord::RelocationRecord(int offset, int targetSize, RelocationType ty
 int RelocationRecord::getOffset()
 {
 	return offset;
-}
-
-int RelocationRecord::getTargetSize()
-{
-	return targetSize;
 }
 
 RelocationType RelocationRecord::getType()
@@ -33,4 +35,9 @@ int RelocationRecord::getSymbolIndex()
 void RelocationRecord::setSymbolIndex(int symbolIndex)
 {
 	this->symbolIndex = symbolIndex;
+}
+
+string RelocationRecord::relocationTypeToString(RelocationType type)
+{
+	return relTypeMap[type];
 }

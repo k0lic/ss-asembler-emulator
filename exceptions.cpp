@@ -12,6 +12,8 @@ MyException::MyException(string fileName, int lineNum)
 
 string MyException::location() const
 {
+	if (lineNum < 0)
+		return fileName;
 	return fileName + " at line " + to_string(lineNum);
 }
 
@@ -24,12 +26,16 @@ ostream& operator<<(ostream& out, const MyException& me)
 	return out;
 }
 
-/* UnrecognizableTokenException */
+/* MyExceptionWithToken */
 
-UnrecognizableTokenException::UnrecognizableTokenException(string fileName, int lineNum, string token) : MyException(fileName, lineNum)
+MyExceptionWithToken::MyExceptionWithToken(string fileName, int lineNum, string token) : MyException(fileName, lineNum)
 {
 	this->token = token;
 }
+
+/* UnrecognizableTokenException */
+
+UnrecognizableTokenException::UnrecognizableTokenException(string fileName, int lineNum, string token) : MyExceptionWithToken(fileName, lineNum, token) {}
 
 string UnrecognizableTokenException::name() const
 {
@@ -44,10 +50,7 @@ string UnrecognizableTokenException::message() const
 /* UnexpectedTokenException */
 
 
-UnexpectedTokenException::UnexpectedTokenException(string fileName, int lineNum, string token) : MyException(fileName, lineNum)
-{
-	this->token = token;
-}
+UnexpectedTokenException::UnexpectedTokenException(string fileName, int lineNum, string token) : MyExceptionWithToken(fileName, lineNum, token) {}
 
 string UnexpectedTokenException::name() const
 {
@@ -61,10 +64,7 @@ string UnexpectedTokenException::message() const
 
 /* InvalidOperandForInstruction */
 
-InvalidOperandForInstruction::InvalidOperandForInstruction(string fileName, int lineNum, string token) : MyException(fileName, lineNum)
-{
-	this->token = token;
-}
+InvalidOperandForInstruction::InvalidOperandForInstruction(string fileName, int lineNum, string token) : MyExceptionWithToken(fileName, lineNum, token) {}
 
 string InvalidOperandForInstruction::name() const
 {
@@ -78,10 +78,7 @@ string InvalidOperandForInstruction::message() const
 
 /* DuplicateDefinition */
 
-DuplicateDefinition::DuplicateDefinition(string fileName, int lineNum, string token) : MyException(fileName, lineNum)
-{
-	this->token = token;
-}
+DuplicateDefinition::DuplicateDefinition(string fileName, int lineNum, string token) : MyExceptionWithToken(fileName, lineNum, token) {}
 
 string DuplicateDefinition::name() const
 {
@@ -95,10 +92,7 @@ string DuplicateDefinition::message() const
 
 /* MissingDefinition */
 
-MissingDefinition::MissingDefinition(string fileName, int lineNum, string token) : MyException(fileName, lineNum)
-{
-	this->token = token;
-}
+MissingDefinition::MissingDefinition(string fileName, int lineNum, string token) : MyExceptionWithToken(fileName, lineNum, token) {}
 
 string MissingDefinition::name() const
 {
@@ -108,4 +102,32 @@ string MissingDefinition::name() const
 string MissingDefinition::message() const
 {
 	return "Missing definition of symbol: '" + token + "'.";
+}
+
+/* NonRelocatableExpression */
+
+NonRelocatableExpression::NonRelocatableExpression(string fileName, int lineNum, string token) : MyExceptionWithToken(fileName, lineNum, token) {}
+
+string NonRelocatableExpression::name() const
+{
+	return "NonRelocatableExpression";
+}
+
+string NonRelocatableExpression::message() const
+{
+	return "Expression used for calculation of symbol: '" + token + "' is invalid! The expression must resolve to either an absolute or relocatable result.";
+}
+
+/* CircularDependencies */
+
+CircularDependencies::CircularDependencies(string fileName, int lineNum, string token) : MyExceptionWithToken(fileName, lineNum, token) {}
+
+string CircularDependencies::name() const
+{
+	return "CircularDependencies";
+}
+
+string CircularDependencies::message() const
+{
+	return "Circular dependencies detected between the following symbols: '" + token + "'. Circular dependencies are not permitted!";
 }
