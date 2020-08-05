@@ -53,33 +53,58 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (argc == 3 || argc > 4)
-	{
-		cout << "Invalid number of arguments, expected either 2 or 4" << endl;
-		return 2;
-	}
-
 	string srcFileName = "";
 	string dstFileName = "a.out";
+	string binaryDstFileName = "bin.out";
+
+	bool keepLocalVars = false;
 
 	// parse console arguments
+	bool parsingError = false;
 	bool nextIsDstFileName = false;
-	for (int i = 1; i < argc; i++)
+	bool nextIsBinary = false;
+	bool nextArgSpecial = false;
+	bool srcFileNameDefined = false;
+	bool dstFileNameDefined = false;
+	bool binaryDstFileNameDefined = false;
+	for (int i = 1; i < argc && !parsingError; i++)
 	{
 		string tmp = argv[i];
 
-		if (nextIsDstFileName)
+		if (nextIsDstFileName && !dstFileNameDefined)
 		{
 			dstFileName = tmp;
-			nextIsDstFileName = false;
+			dstFileNameDefined = true;
+			nextArgSpecial = nextIsDstFileName = false;
 		}
+		else if (nextIsBinary && !binaryDstFileNameDefined)
+		{
+			binaryDstFileName = tmp;
+			binaryDstFileNameDefined = true;
+			nextArgSpecial = nextIsBinary = false;
+		}
+		else if (nextArgSpecial)
+			parsingError = true;
 		else if (tmp == "-o")
-			nextIsDstFileName = true;
+			nextArgSpecial = nextIsDstFileName = true;
+		else if (tmp == "-bin")
+			nextArgSpecial = nextIsBinary = true;
+		else if (tmp == "-local")
+			keepLocalVars = true;
 		else
+		{
+			if (srcFileNameDefined)
+				parsingError = true;
+
 			srcFileName = tmp;
+			srcFileNameDefined = true;
+		}
 	}
 
-	if (nextIsDstFileName)
+	if (nextArgSpecial || !srcFileNameDefined)
+		parsingError = true;
+
+	if (parsingError)
 	{
 		cout << "Could not parse console arguments" << endl;
 		return 3;
@@ -1011,7 +1036,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		// STEP5: reorder symbol table so section symbols are at the beginning of the table
+		// STEP5: reorder symbol table so section symbols are at the beginning of the table and remove local symbols
 		map<int, int> symTabRemap;
 		symTabRemap[0] = 0;
 		int remapNextSpot = 1;
@@ -1021,9 +1046,14 @@ int main(int argc, char *argv[])
 			if (symbolTable[i].getSectionCode() != nullptr)
 				symTabRemap[i] = remapNextSpot++;
 
-		// remap the rest of the symbols
+		// remap the global symbols
 		for (int i = 1; i < symbolTable.size(); i++)
-			if (symbolTable[i].getSectionCode() == nullptr)
+			if (symbolTable[i].getSectionCode() == nullptr && symbolTable[i].isGlobal())
+				symTabRemap[i] = remapNextSpot++;
+
+		// remap the local symbols
+		for (int i = 1; i < symbolTable.size(); i++)
+			if (symbolTable[i].getSectionCode() == nullptr && !symbolTable[i].isGlobal())
 				symTabRemap[i] = remapNextSpot++;
 
 		// apply new order to relocation records
@@ -1063,12 +1093,22 @@ int main(int argc, char *argv[])
 				i++;
 		}
 
+		// remove local symbols
+		if (!keepLocalVars)
+			while (symbolTable.back().getSectionCode() == nullptr && !symbolTable.back().isGlobal())
+				symbolTable.pop_back();
+
 		// STEP6: output to dst file
 		// TODO: maybe a binary form for the emulator
 		ofstream out(dstFileName);
+		ofstream binOut(binaryDstFileName, ios::out | ios::binary);
 
+		// write human readable text version
 		ElfWriter *elf = new ElfWriter(symbolTable);
 		out << *elf;
+
+		// write binary version
+		symbolTable.write(binOut);
 	}
 	catch (MyException& e)
 	{

@@ -51,6 +51,32 @@ int Section::size()
 	return code.size();
 }
 
+/* INPUT AND OUTPUT */
+
+void Section::write(ofstream& out)
+{
+	// write code length
+	unsigned int codeSize = code.size();
+	out.write((char*)&codeSize, sizeof(codeSize));
+
+	// write all of the bytes
+	out.write((char*)&code[0], codeSize * sizeof(code[0]));
+}
+
+void Section::read(ifstream& in)
+{
+	// read code length
+	unsigned int codeSize;
+	in.read((char*)&codeSize, sizeof(codeSize));
+
+	// read all of the bytes
+	unsigned char bytes[codeSize];
+	in.read((char*)bytes, codeSize * sizeof(unsigned char));
+
+	// initialize the vector
+	code.assign(bytes, bytes + codeSize);
+}
+
 ostream& operator<<(ostream& out, const Section& s)
 {
 	// setup for hexadecimal format

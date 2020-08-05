@@ -34,6 +34,16 @@ SymbolTableEntry& SymbolTable::operator[](int index)
 	return symbols[index];
 }
 
+SymbolTableEntry& SymbolTable::back()
+{
+	return symbols.back();
+}
+
+void SymbolTable::pop_back()
+{
+	symbols.pop_back();
+}
+
 int SymbolTable::getSymbolIndex(string name)
 {
 	for (unsigned int i = 0; i < symbols.size(); i++)
@@ -97,25 +107,28 @@ void SymbolTable::printAllSymbols()
 	cout << endl;
 }
 
-// bool SymbolTable::popReference(string name, int *sectionNum, int *address, BPAction *action)
-// {
-// 	for (int i = 0; i < symbols.size(); i++)
-// 	{
-// 		if (symbols[i].getName() == name)
-// 			return symbols[i].popReference(sectionNum, address, action);
-// 	}
+void SymbolTable::write(ofstream& out)
+{
+	// write the number of symbols in the table
+	unsigned int symbolsSize = symbols.size();
+	out.write((char*)&symbolsSize, sizeof(symbolsSize));
 
-// 	return false;
-// }
+	// write every symbol
+	for (unsigned int i = 1; i < symbolsSize; i++)
+		symbols[i].write(out);
+}
 
-// void SymbolTable::pushReference(string name, int sectionNum, int address, BPAction action)
-// {
-// 	for (int i = 0; i < symbols.size(); i++)
-// 	{
-// 		if (symbols[i].getName() == name)
-// 		{
-// 			symbols[i].pushReference(sectionNum, address, action);
-// 			return;
-// 		}
-// 	}
-// }
+void SymbolTable::read(ifstream& in)
+{
+	// read the number of symbols in the table
+	unsigned int symbolsSize;
+	in.read((char*)&symbolsSize, sizeof(symbolsSize));
+
+	// read every symbol
+	symbols.reserve(symbolsSize);
+	for (unsigned int i = 1; i < symbolsSize; i++)
+	{
+		symbols.emplace_back("PLACEHOLDER", i);
+		symbols.back().read(in);
+	}
+}

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
-// #include "forwardreference.h"
+#include <fstream>
 #include "section.h"
 #include "relocationrecord.h"
 
@@ -18,14 +18,15 @@ public:
 	SymbolTableEntry(SymbolTableEntry&& other);													// move constructor
 	~SymbolTableEntry();
 	SymbolTableEntry& operator=(const SymbolTableEntry& other);									// copy assign operator
-	// bool popReference(int *sectionNum, int *address, BPAction *action);
-	// void pushReference(int sectionNum, int address, BPAction action);
+	void write(ofstream& out);
+	void read(ifstream& in);
 	string getName();
 	bool isDefined();
 	int getSection();
 	int getValue();
 	bool isGlobal();
 	int getIndex();
+	int getSize();
 	Section* getSectionCode();
 	vector<RelocationRecord>* getRelocationRecords(bool autoCreate = true);
 	void setDefined(bool defined);
@@ -33,6 +34,7 @@ public:
 	void setValue(int value);
 	void setGlobal(bool global);
 	void setIndex(int index);
+	void setSize(int size);
 	void newSectionCode();
 	vector<RelocationRecord>* newRelocationRecords();
 private:
@@ -42,7 +44,7 @@ private:
 	int value;
 	bool global;
 	int index;
-	// vector<ForwardReference> references;
+	int size;
 	Section *sectionCode;
 	vector<RelocationRecord> *relocationRecords;
 };
