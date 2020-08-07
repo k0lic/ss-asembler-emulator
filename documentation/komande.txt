@@ -1,0 +1,16 @@
+ASEMBLER:
+bin/asembler -o out/test.o -bin out/test.bin tests/test.s
+bin/asembler -o out/test_plus.o -bin out/test_plus.bin tests/test_plus.s
+bin/asembler -o out/zadatak9.o -bin out/zadatak9.bin tests/zadatak9.s
+
+bin/asembler -o out/emu01.o -bin out/emu01.bin tests/emu01.s
+
+bin/asembler -o out/ivt.o -bin out/ivt.bin tests/ivt.s
+bin/asembler -o out/mmr.o -bin out/mmr.bin tests/mmr.s
+bin/asembler -o out/routines.o -bin out/routines.bin tests/routines.s
+bin/asembler -o out/main.o -bin out/main.bin tests/main.s
+
+EMULATOR:
+bin/emulator out/emu01.bin -place=ivt@0x0000 -place=mmr@0xff00 -place=text@0x0010 -place=stack@0xfe00
+
+bin/emulator out/ivt.bin out/mmr.bin out/routines.bin out/main.bin -place=ivt@0x0000 -place=mmr@0xff00 -place=stack@0xfe00 -place=text@0x0100 -place=data@0xfd00

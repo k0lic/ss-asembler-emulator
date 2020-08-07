@@ -49,11 +49,16 @@ int main(int argc, char *argv[])
 	SymbolTable mainTable;
 	unsigned char memory[MEM_SIZE];
 
+	bool showLinkedSymbolTable = false;
+	bool showMemoryAfterLoading = false;
+	unsigned int showMemoryFrom = 0;
+
 	try
 	{
 		/*** STAGE1: LINKER STAGE ***/
 		// parse console arguments
 		regex sectionPlacementPattern("-place=([^@]+)@0x([0-9a-fA-F]{4})");
+		regex showMemoryPattern("-show=(.+)");
 		smatch matches;
 		for (int i = 1; i < argc; i++)
 		{
@@ -69,6 +74,13 @@ int main(int argc, char *argv[])
 					throw MessageException("Parsing console arguments FAILED!\nInvalid placement argument: '" + tmp + "'. Placement must be a positive integer less than " + to_string(MEM_SIZE) + "!");
 
 				sectionPlacements[sectionName] = placement;
+			}
+			else if (tmp == "-table")
+				showLinkedSymbolTable = true;
+			else if (regex_match(tmp, matches, showMemoryPattern))
+			{
+				showMemoryAfterLoading = true;
+				showMemoryFrom = stoi(matches[1].str());
 			}
 			else if (tmp[0] == '-')
 				throw MessageException("Parsing console arguments FAILED!\nCould not parse argument: '" + tmp + "'.");
@@ -231,8 +243,12 @@ int main(int argc, char *argv[])
 			if (!mainTable[i].isDefined())
 				throw MissingDefinition("NO_INFO", -1, mainTable[i].getName());
 
-		ElfWriter elf (mainTable);
-		cout << elf << endl;
+		// DEBUG SYMBOL TABLE OUTPUT
+		if (showLinkedSymbolTable)
+		{
+			ElfWriter elf (mainTable);
+			cout << "Symbol table after linking:" << endl << elf << endl;
+		}
 
 		// copy section contents into memory
 		for (unsigned int i = 0; i < inputFiles.size(); i++)
@@ -306,20 +322,24 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		// TEST OUTPUT
-		cout << hex;
-		for (int i = 0; i < 160; i++)
+		// DEBUG MEMORY SEGMENT OUTPUT
+		if (showMemoryAfterLoading)
 		{
-			cout << setw(2) << setfill('0') << +memory[i];
+			cout << "Showing 160 bytes of memory starting from " << showMemoryFrom << endl;
+			cout << hex;
+			for (unsigned int i = showMemoryFrom; i < showMemoryFrom + 160 && i < 65'535; i++)
+			{
+				cout << setw(2) << setfill('0') << +memory[i];
 
-			if (i % 16 == 15)
-				cout << endl;
-			else if (i % 4 == 3)
-				cout << "\t\t";
-			else
-				cout << " ";
+				if (i % 16 == 15)
+					cout << endl;
+				else if (i % 4 == 3)
+					cout << "\t\t";
+				else
+					cout << " ";
+			}
+			cout << endl << dec;
 		}
-		cout << dec;
 
 		/*** STAGE2: EMULATOR STAGE ***/
 		ProcessorContext context;
@@ -332,9 +352,9 @@ int main(int argc, char *argv[])
 		// setup timer
 		auto lastCheckpoint = chrono::system_clock::now();
 		vector<double> cycleTimes = { 0.5, 1, 1.5, 2, 5, 10, 30, 60 };
-		long long cycleTime = cycleTimes[0];	// default cycle is 500ms
+		double cycleTime = cycleTimes[0];	// default cycle is 500ms
 
-		cout << ">EMULATION STARTED" << endl;
+		// cout << ">EMULATION STARTED" << endl;
 
 		// loop until you reach the 'halt' instruction
 		while (!logic.isHalted())
@@ -360,7 +380,7 @@ int main(int argc, char *argv[])
 				context.setInterruptSignal(0, true);
 
 			// check if interrupt signal is active and if interrupt is not masked
-			if (context.interruptSignal(1) && !context.getInterrupt() && !context.getTimer())
+			if (context.interruptSignal(0) && !context.getInterrupt() && !context.getTimer())
 			{
 				// call timer interrupt routine
 				logic.interrupt(context.getInterruptTableEntry(0));
@@ -396,7 +416,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		cout << ">EMULATION ENDED" << endl;
+		// cout << ">EMULATION ENDED" << endl;
 	}
 	catch (MyException& e)
 	{

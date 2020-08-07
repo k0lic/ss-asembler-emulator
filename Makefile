@@ -21,5 +21,5 @@ bin/%.o: source/%.cpp source/%.h
 	g++ -c -Wall -o $@ $<
 
 clean:
-	rm *.o
-	rm *.bin
+	rm bin/*
+	rm out/*

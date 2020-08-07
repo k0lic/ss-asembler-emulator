@@ -936,6 +936,16 @@ int main(int argc, char *argv[])
 			symbolTable[index].setGlobal(true);
 		}
 
+		// check if all local symbols are defined - global symbols were just checked
+		for (int i = 1; i < symbolTable.size(); i++)
+		{
+			if (symbolTable[i].isGlobal())
+				continue;
+
+			if (!symbolTable[i].isDefined())
+				throw MissingDefinition(srcFileName, -1, symbolTable[i].getName());
+		}
+
 		// STEP4: update relocation records - remove same-section jumps, process local symbol records
 		for (int i = 0; i < symbolTable.size(); i++)
 		{
