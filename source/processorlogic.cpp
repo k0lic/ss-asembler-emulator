@@ -7,35 +7,6 @@ using namespace std;
 const int ProcessorLogic::MIN_ADDRESS = 0;
 const int ProcessorLogic::MAX_ADDRESS = 65'535;
 
-// bool (*ProcessorLogic::instructions[])(int) =
-// {
-// 	ins_halt,
-// 	ins_iret,
-// 	ins_ret,
-// 	ins_int,
-// 	ins_call,
-// 	ins_jmp,
-// 	ins_jeq,
-// 	ins_jne,
-// 	ins_jgt,
-// 	ins_push,
-// 	ins_pop,
-// 	ins_xchg,
-// 	ins_mov,
-// 	ins_add,
-// 	ins_sub,
-// 	ins_mul,
-// 	ins_div,
-// 	ins_cmp,
-// 	ins_not,
-// 	ins_and,
-// 	ins_or,
-// 	ins_xor,
-// 	ins_test,
-// 	ins_shl,
-// 	ins_shr
-// };
-
 /* CONSTRUCTOR */
 
 ProcessorLogic::ProcessorLogic(ProcessorContext *context, unsigned char *memory)
@@ -91,50 +62,11 @@ bool ProcessorLogic::executeNextInstruction()
 		&ProcessorLogic::ins_shr
 	};
 
+	// call the appropriate instruction method
 	if (!(this->*insss[opCode])(sizeOfOperands))
 		return false;
 
 	return true;
-	// int firstOperand, secondOperand, result;
-	// AddressingMode amFirst, amSecond, amResult;
-	// unsigned char regNumFirst, regNumSecond, regNumResult;
-	// bool highFirst, highSecond, highResult;
-
-	// // 0 operand instructions
-	// if (opCode < 3);
-	// // 1 operand instructions
-	// else if (opCode < 11)
-	// {
-	// 	// read first operand
-	// 	if (!nextAddressingMode(&amFirst, &regNumFirst, &highFirst))
-	// 		return false;
-	// 	firstOperand = nextOperand(amFirst, sizeOfOperands);
-
-	// 	// calculate first operand
-	// 	getOperandValue(&firstOperand, amFirst, regNumFirst, highFirst, sizeOfOperands);
-	// }
-	// // 2 operand instructions
-	// else if (opCode < 25)
-	// {
-	// 	// read first operand
-	// 	if (!nextAddressingMode(&amFirst, &regNumFirst, &highFirst))
-	// 		return false;
-	// 	firstOperand = nextOperand(amFirst, sizeOfOperands);
-
-	// 	// read second operand
-	// 	if (!nextAddressingMode(&amSecond, &regNumSecond, &highSecond))
-	// 		return false;
-	// 	secondOperand = nextOperand(amSecond, sizeOfOperands);
-
-	// 	// calculate first operand
-	// 	getOperandValue(&firstOperand, amFirst, regNumFirst, highFirst, sizeOfOperands);
-
-	// 	// calculate second operand
-	// 	getOperandValue(&secondOperand, amSecond, regNumSecond, highSecond, sizeOfOperands);
-	// }
-	// // INVALID op code
-	// else
-	// 	return false;
 }
 
 bool ProcessorLogic::isHalted()
@@ -187,8 +119,6 @@ unsigned int ProcessorLogic::nextWordu()
 	context->incPC();
 	return word;
 }
-
-// enum AddressingMode { IMMEDIATE, REGISTER_DIRECT, REGISTER_INDIRECT, REGISTER_INDIRECT_WITH_OFFSET, MEMORY };
 
 bool ProcessorLogic::nextAddressingMode(AddressingMode *mode, unsigned char *regNum, bool *high)
 {
@@ -270,31 +200,6 @@ void ProcessorLogic::processOperand(int *operand, int *address, int rawOperand, 
 	if (mode == REGISTER_INDIRECT || mode == REGISTER_INDIRECT_WITH_OFFSET || mode == MEMORY)
 		*operand = LittleEndian::charLittleEndianToInt(operandSize, memory + *address);
 }
-
-// void ProcessorLogic::saveResult(int result, int operand, AddressingMode mode, unsigned char regNum, bool high, int resultSize)
-// {
-// 	if (mode == REGISTER_DIRECT)
-// 	{
-// 		if (resultSize == 1)
-// 		{
-// 			if (high)
-// 				context->setRegisterHigh(regNum, result);
-// 			else
-// 				context->setRegisterLow(regNum, result);
-// 		}
-// 		else
-// 			context->setRegister(regNum, result);
-// 	}
-// 	else if (mode == REGISTER_INDIRECT)
-// 		LittleEndian::intToLittleEndianChar(result, resultSize, memory + (unsigned short)context->getRegister(regNum));
-// 	else if (mode == REGISTER_INDIRECT_WITH_OFFSET)
-// 	{
-// 		unsigned int dest = (int)(unsigned short)context->getRegister(regNum) + operand;
-// 		LittleEndian::intToLittleEndianChar(result, resultSize, memory + dest);
-// 	}
-// 	else if (mode == MEMORY)
-// 		LittleEndian::intToLittleEndianChar(result, resultSize, memory + operand);
-// }
 
 void ProcessorLogic::saveResult(int result, AddressingMode mode, unsigned char regNum, bool high, int address, int resultSize)
 {

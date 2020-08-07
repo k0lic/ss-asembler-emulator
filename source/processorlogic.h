@@ -31,7 +31,6 @@ private:
 	bool nextAddressingMode(AddressingMode *mode, unsigned char *regNum, bool *high);
 	int nextOperand(AddressingMode mode, int operandSize);
 	void processOperand(int *operand, int *address, int rawOperand, AddressingMode mode, unsigned char regNum, bool high, int operandSize);
-	// void saveResult(int result, AddressingMode mode, unsigned char regNum, bool high, int resultSize);
 	void saveResult(int result, AddressingMode mode, unsigned char regNum, bool high, int address, int resultSize);
 	void outputCheck(AddressingMode mode, int address);
 

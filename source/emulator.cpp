@@ -1,4 +1,9 @@
 #include <regex>
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <chrono>
+#include <ctime>
 #include "objectfile.h"
 #include "elfwriter.h"
 #include "processorlogic.h"
@@ -7,6 +12,35 @@
 using namespace std;
 
 #define MEM_SIZE (65'536)
+
+
+// copied of the web - linux kbhit sorcery
+int kbhit()
+{
+	struct termios oldt, newt;
+	int ch;
+	int oldf;
+
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+	oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+	ch = getchar();
+
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+	if(ch != EOF)
+	{
+		ungetc(ch, stdin);
+		return 1;
+	}
+
+	return 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -295,22 +329,71 @@ int main(int argc, char *argv[])
 		unsigned int startingAddress = LittleEndian::charLittleEndianToUInt(2, memory + 0);
 		context.setPC(startingAddress);
 
+		// setup timer
+		auto lastCheckpoint = chrono::system_clock::now();
+		vector<double> cycleTimes = { 0.5, 1, 1.5, 2, 5, 10, 30, 60 };
+		long long cycleTime = cycleTimes[0];	// default cycle is 500ms
+
 		cout << ">EMULATION STARTED" << endl;
 
 		// loop until you reach the 'halt' instruction
 		while (!logic.isHalted())
 		{
+			// save instruction start PC value, so we can revert to it if there is an error in the instruction code
+			unsigned short instructionStart = context.getPC();
+
 			// try to execute instruction - care for invalid op-codes and addressing modes
 			bool successfulInstruction = logic.executeNextInstruction();
 
-			// TODO: maybe save instruction start PC value, so we can revert to it if there is an error in the instruction code
-
-			// if there was an incorrect instruction - execute interrupt routine from IVT entry 1
+			// if there was an incorrect instruction - go back to the start of the instruction and execute interrupt routine from IVT entry 1
 			if (!successfulInstruction)
+			{
+				context.setPC(instructionStart);
 				logic.interrupt(1);
+			}
 
-			// TODO: timer
-			// TODO: terminal
+			// process timer interrupts
+			auto currentTime = chrono::system_clock::now();
+			chrono::duration<double> elapsedTime = currentTime - lastCheckpoint;
+
+			if (elapsedTime.count() >= cycleTime)
+				context.setInterruptSignal(0, true);
+
+			// check if interrupt signal is active and if interrupt is not masked
+			if (context.interruptSignal(1) && !context.getInterrupt() && !context.getTimer())
+			{
+				// call timer interrupt routine
+				logic.interrupt(context.getInterruptTableEntry(0));
+
+				// prepare for next cycle
+				lastCheckpoint = currentTime;
+				// read the timer_cfg memory mapped file (at 0xff10) and adjust cycle time
+				unsigned int timerConfig = LittleEndian::charLittleEndianToUInt(2, memory + 0xff10);
+				cycleTime = cycleTimes[timerConfig < cycleTimes.size() ? timerConfig : cycleTimes.size() - 1];
+
+				// reset the interrupt line
+				context.setInterruptSignal(0, false);
+			}
+
+			// process terminal interrupts
+			if (kbhit())
+				context.setInterruptSignal(1, true);
+
+			// check if interrupt signal is active and if interrupt is not masked
+			if (context.interruptSignal(1) && !context.getInterrupt() && !context.getTerminal())
+			{
+				// get pressed key
+				int keyValue = getchar();
+
+				// write pressed key value into data_in memory mapped register at 0xff02
+				LittleEndian::intToLittleEndianChar(keyValue, 2, memory + 0xff02);
+
+				// call terminal interrupt routine
+				logic.interrupt(context.getInterruptTableEntry(1));
+
+				// reset the interrupt line
+				context.setInterruptSignal(1, false);
+			}
 		}
 
 		cout << ">EMULATION ENDED" << endl;

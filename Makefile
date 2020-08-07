@@ -1,23 +1,23 @@
-AS_OBJS = asembler.o parser.o symboltable.o symboltableentry.o section.o incalculable.o expression.o globalsymbol.o exceptions.o relocationrecord.o littleendian.o elfwriter.o
-EM_OBJS = emulator.o symboltable.o symboltableentry.o section.o relocationrecord.o elfwriter.o objectfile.o symboladdendum.o littleendian.o processorcontext.o processorlogic.o exceptions.o
+AS_OBJS = bin/asembler.o bin/parser.o bin/symboltable.o bin/symboltableentry.o bin/section.o bin/incalculable.o bin/expression.o bin/globalsymbol.o bin/exceptions.o bin/relocationrecord.o bin/littleendian.o bin/elfwriter.o
+EM_OBJS = bin/emulator.o bin/symboltable.o bin/symboltableentry.o bin/section.o bin/relocationrecord.o bin/elfwriter.o bin/objectfile.o bin/symboladdendum.o bin/littleendian.o bin/processorcontext.o bin/processorlogic.o bin/exceptions.o
 
 .PHONY: both clean
 
-both: asembler emulator
+both: bin/asembler bin/emulator
 
-asembler: $(AS_OBJS)
+bin/asembler: $(AS_OBJS)
 	g++ -Wall -o $@ $(AS_OBJS)
 
-emulator: $(EM_OBJS)
+bin/emulator: $(EM_OBJS)
 	g++ -Wall -o $@ $(EM_OBJS)
 
-asembler.o: asembler.cpp
+bin/asembler.o: source/asembler.cpp
 	g++ -c -Wall -o $@ $<
 
-emulator.o: emulator.cpp
+bin/emulator.o: source/emulator.cpp
 	g++ -c -Wall -o $@ $<
 
-%.o: %.cpp %.h
+bin/%.o: source/%.cpp source/%.h
 	g++ -c -Wall -o $@ $<
 
 clean:
