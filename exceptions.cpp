@@ -131,3 +131,23 @@ string CircularDependencies::message() const
 {
 	return "Circular dependencies detected between the following symbols: '" + token + "'. Circular dependencies are not permitted!";
 }
+
+/* MessageException */
+
+MessageException::MessageException(string message)
+{
+	this->message = message;
+}
+
+string MessageException::getMessage() const
+{
+	return message;
+}
+
+ostream& operator<<(ostream& out, const MessageException& me)
+{
+	out << endl << "\033[1;31m" << endl;
+	out << me.getMessage() << endl;
+	out << "\033[0m" << endl;
+	return out;
+}

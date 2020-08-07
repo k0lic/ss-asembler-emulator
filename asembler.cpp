@@ -453,8 +453,10 @@ int main(int argc, char *argv[])
 
 					// calculate the operand description
 					unsigned char operandDescription = 0;
-					if (branchOperandExpected ? !(flags & (Parser::DOLLAR | Parser::STAR | Parser::PARENTHESES)) : (flags & Parser::DOLLAR))	// check the addressing mode
+					if (branchOperandExpected && !(flags & Parser::STAR))
 						operandDescription |= 0 | 1;	// immediate operand - or 1 to indicate it is a relative jump (to differantiate from branch instruction with immediate literal operand)
+					else if (!branchOperandExpected && (flags & Parser::DOLLAR))
+						operandDescription |= 0;		// 'normal' immediate operand (non-branch instruction)
 					else
 						operandDescription |= 128;		// direct memory operand
 
@@ -1099,7 +1101,6 @@ int main(int argc, char *argv[])
 				symbolTable.pop_back();
 
 		// STEP6: output to dst file
-		// TODO: maybe a binary form for the emulator
 		ofstream out(dstFileName);
 		ofstream binOut(binaryDstFileName, ios::out | ios::binary);
 

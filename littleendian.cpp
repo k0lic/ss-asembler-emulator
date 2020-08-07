@@ -36,3 +36,17 @@ int LittleEndian::charLittleEndianToInt(int size, unsigned char *bytes)
 
 	return x;
 }
+
+unsigned int LittleEndian::charLittleEndianToUInt(int size, unsigned char *bytes)
+{
+	unsigned int x = 0;
+	unsigned int shift = 0;
+
+	for (int i = 0; i < size; i++)
+	{
+		x |= bytes[i] << shift;
+		shift += 8;
+	}
+
+	return x;
+}

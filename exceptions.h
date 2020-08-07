@@ -28,6 +28,16 @@ protected:
 	string token;
 };
 
+class MessageException
+{
+public:
+	MessageException(string message);
+	string getMessage() const;
+	friend ostream& operator<<(ostream& out, const MessageException& me);
+private:
+	string message;
+};
+
 /* DERIVED CLASSES */
 
 class UnrecognizableTokenException : public MyExceptionWithToken
